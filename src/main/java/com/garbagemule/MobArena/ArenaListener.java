@@ -124,6 +124,7 @@ public class ArenaListener
     private boolean allowTeleport,
             canShare,
             autoIgniteTNT;
+    private String mobSpawns;
 
     private Set<Player> banned;
 
@@ -148,6 +149,7 @@ public class ArenaListener
         this.canShare         = s.getBoolean("share-items-in-arena", true);
         this.autoIgniteTNT    = s.getBoolean("auto-ignite-tnt",      false);
         this.useClassChests   = s.getBoolean("use-class-chests",     false);
+        this.mobSpawns        = s.getString("mob-spawns",            "default");
 
         this.classLimits = arena.getClassLimitManager();
 
@@ -401,11 +403,19 @@ public class ArenaListener
             return;
         }
 
+        // Mobs are not allowed to spawn
+        if (!this.mobSpawns.equals("none")) {
+            event.setCancelled(true);
+            return;
+        }
+
+        // Some (or all) mobs are allowed to spawn, so we'll just explicitly cancel the exceptions.
+        event.setCancelled(false);
+
         SpawnReason reason = event.getSpawnReason();
 
         // Allow player-made iron golems and snowmen
         if (reason == SpawnReason.BUILD_IRONGOLEM || reason == SpawnReason.BUILD_SNOWMAN) {
-            event.setCancelled(false);
             monsters.addGolem(event.getEntity());
             return;
         }
@@ -418,16 +428,15 @@ public class ArenaListener
          */
         if (reason == SpawnReason.DEFAULT) {
             if (event.getEntityType() == EntityType.VEX) {
-                event.setCancelled(false);
                 monsters.addMonster(event.getEntity());
-            } else {
+            } else if (this.mobSpawns.equals("default")) {
                 event.setCancelled(true);
             }
             return;
         }
 
         // If not custom, we probably don't want it, so get rid of it
-        if (reason != SpawnReason.CUSTOM) {
+        if (this.mobSpawns.equals("default") && reason != SpawnReason.CUSTOM) {
             event.setCancelled(true);
             return;
         }
